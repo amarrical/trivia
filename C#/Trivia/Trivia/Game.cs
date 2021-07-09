@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace Trivia
+﻿namespace Trivia
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
     public class Game
     {
         private readonly List<string> _players = new List<string>();
@@ -25,38 +25,27 @@ namespace Trivia
         {
             for (var i = 0; i < 50; i++)
             {
-                _popQuestions.AddLast("Pop Question " + i);
-                _scienceQuestions.AddLast(("Science Question " + i));
-                _sportsQuestions.AddLast(("Sports Question " + i));
-                _rockQuestions.AddLast(CreateRockQuestion(i));
+                this._popQuestions.AddLast($"Pop Question {i}");
+                this._scienceQuestions.AddLast($"Science Question {i}");
+                this._sportsQuestions.AddLast($"Sports Question {i}");
+                this._rockQuestions.AddLast($"Rock Question {i}");
             }
         }
 
-        public string CreateRockQuestion(int index)
-        {
-            return "Rock Question " + index;
-        }
+        public bool IsPlayable => this.PlayerCount >= 2;
 
-        public bool IsPlayable()
-        {
-            return (HowManyPlayers() >= 2);
-        }
+        public int PlayerCount => this._players.Count;
 
         public bool Add(string playerName)
         {
             _players.Add(playerName);
-            _places[HowManyPlayers()] = 0;
-            _purses[HowManyPlayers()] = 0;
-            _inPenaltyBox[HowManyPlayers()] = false;
+            _places[this.PlayerCount] = 0;
+            _purses[this.PlayerCount] = 0;
+            _inPenaltyBox[this.PlayerCount] = false;
 
             Console.WriteLine(playerName + " was added");
             Console.WriteLine("They are player number " + _players.Count);
             return true;
-        }
-
-        public int HowManyPlayers()
-        {
-            return _players.Count;
         }
 
         public void Roll(int roll)
@@ -125,59 +114,48 @@ namespace Trivia
 
         private string CurrentCategory()
         {
-            if (_places[_currentPlayer] == 0) return "Pop";
-            if (_places[_currentPlayer] == 4) return "Pop";
-            if (_places[_currentPlayer] == 8) return "Pop";
-            if (_places[_currentPlayer] == 1) return "Science";
-            if (_places[_currentPlayer] == 5) return "Science";
-            if (_places[_currentPlayer] == 9) return "Science";
-            if (_places[_currentPlayer] == 2) return "Sports";
-            if (_places[_currentPlayer] == 6) return "Sports";
-            if (_places[_currentPlayer] == 10) return "Sports";
-            return "Rock";
+            switch (this._places[this._currentPlayer])
+            {
+                case 0:
+                case 4:
+                case 8:
+                    return "Pop";
+                case 1:
+                case 5:
+                case 9:
+                    return "Science";
+                case 2:
+                case 6:
+                case 10:
+                    return "Sports";
+                default:
+                    return "Rock";
+            }
         }
 
         public bool WasCorrectlyAnswered()
         {
+            var winner = false;
+
             if (_inPenaltyBox[_currentPlayer])
             {
                 if (_isGettingOutOfPenaltyBox)
                 {
                     Console.WriteLine("Answer was correct!!!!");
-                    _purses[_currentPlayer]++;
-                    Console.WriteLine(_players[_currentPlayer]
-                            + " now has "
-                            + _purses[_currentPlayer]
-                            + " Gold Coins.");
+                    this.AddCoin();
 
-                    var winner = DidPlayerWin();
-                    _currentPlayer++;
-                    if (_currentPlayer == _players.Count) _currentPlayer = 0;
-
-                    return winner;
+                    this.AdvanceToNextPlayer();
+                    return DidPlayerWin();
                 }
-                else
-                {
-                    _currentPlayer++;
-                    if (_currentPlayer == _players.Count) _currentPlayer = 0;
-                    return true;
-                }
-            }
-            else
-            {
-                Console.WriteLine("Answer was corrent!!!!");
-                _purses[_currentPlayer]++;
-                Console.WriteLine(_players[_currentPlayer]
-                        + " now has "
-                        + _purses[_currentPlayer]
-                        + " Gold Coins.");
 
-                var winner = DidPlayerWin();
-                _currentPlayer++;
-                if (_currentPlayer == _players.Count) _currentPlayer = 0;
-
-                return winner;
+                this.AdvanceToNextPlayer();
+                return true;
             }
+
+            Console.WriteLine("Answer was corrent!!!!");
+            this.AddCoin();
+            this.AdvanceToNextPlayer();
+            return this.DidPlayerWin();
         }
 
         public bool WrongAnswer()
@@ -186,15 +164,27 @@ namespace Trivia
             Console.WriteLine(_players[_currentPlayer] + " was sent to the penalty box");
             _inPenaltyBox[_currentPlayer] = true;
 
-            _currentPlayer++;
-            if (_currentPlayer == _players.Count) _currentPlayer = 0;
+            this.AdvanceToNextPlayer();
             return true;
         }
 
+        private void AddCoin()
+        {
+            this._purses[this._currentPlayer]++;
+            Console.WriteLine(
+                this._players[this._currentPlayer] + " now has " + this._purses[this._currentPlayer] + " Gold Coins.");
+        }
 
         private bool DidPlayerWin()
         {
-            return !(_purses[_currentPlayer] == 6);
+            return this._purses[this._currentPlayer] < 6;
+        }
+
+        private void AdvanceToNextPlayer()
+        {
+            this._currentPlayer++;
+            if (this._currentPlayer == this._players.Count) 
+                this._currentPlayer = 0;
         }
     }
 
