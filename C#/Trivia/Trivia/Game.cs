@@ -6,19 +6,13 @@
 
     public class Game
     {
-        private readonly List<string> _players = new List<string>();
-
-        private readonly int[] _places = new int[6];
-        private readonly int[] _purses = new int[6];
-
-        private readonly bool[] _inPenaltyBox = new bool[6];
-
+        private readonly List<Player> _players = new List<Player>();
         private readonly LinkedList<string> _popQuestions = new LinkedList<string>();
         private readonly LinkedList<string> _scienceQuestions = new LinkedList<string>();
         private readonly LinkedList<string> _sportsQuestions = new LinkedList<string>();
         private readonly LinkedList<string> _rockQuestions = new LinkedList<string>();
 
-        private int _currentPlayer;
+        private Player _currentPlayer;
         private bool _isGettingOutOfPenaltyBox;
 
         public Game()
@@ -38,83 +32,78 @@
 
         public bool Add(string playerName)
         {
-            _players.Add(playerName);
-            _places[this.PlayerCount] = 0;
-            _purses[this.PlayerCount] = 0;
-            _inPenaltyBox[this.PlayerCount] = false;
-
+            var player = new Player(playerName);
+            this._players.Add(player);
             Console.WriteLine(playerName + " was added");
-            Console.WriteLine("They are player number " + _players.Count);
+            Console.WriteLine("They are player number " + this.PlayerCount);
+            this._currentPlayer ??= player;
             return true;
         }
 
         public void Roll(int roll)
         {
-            Console.WriteLine(_players[_currentPlayer] + " is the current player");
+            Console.WriteLine(this._currentPlayer.Name + " is the current player");
             Console.WriteLine("They have rolled a " + roll);
 
-            if (_inPenaltyBox[_currentPlayer])
+            if (this._currentPlayer.InPenalityBox)
             {
                 if (roll % 2 != 0)
                 {
-                    _isGettingOutOfPenaltyBox = true;
+                    this._currentPlayer.IsGettingOutOfPenalityBox();
+                    this._isGettingOutOfPenaltyBox = true;
 
-                    Console.WriteLine(_players[_currentPlayer] + " is getting out of the penalty box");
-                    _places[_currentPlayer] = _places[_currentPlayer] + roll;
-                    if (_places[_currentPlayer] > 11) _places[_currentPlayer] = _places[_currentPlayer] - 12;
-
-                    Console.WriteLine(_players[_currentPlayer]
-                            + "'s new location is "
-                            + _places[_currentPlayer]);
-                    Console.WriteLine("The category is " + CurrentCategory());
-                    AskQuestion();
+                    Console.WriteLine($"{this._currentPlayer.Name} is getting out of the penalty box");
+                    this.MovePlayerAhead(roll);
+                    Console.WriteLine("The category is " + this.CurrentCategory());
+                    this.AskQuestion();
                 }
                 else
                 {
-                    Console.WriteLine(_players[_currentPlayer] + " is not getting out of the penalty box");
-                    _isGettingOutOfPenaltyBox = false;
+                    Console.WriteLine($"{this._currentPlayer.Name} is not getting out of the penalty box");
+                    this._isGettingOutOfPenaltyBox = false;
                 }
             }
             else
             {
-                _places[_currentPlayer] = _places[_currentPlayer] + roll;
-                if (_places[_currentPlayer] > 11) _places[_currentPlayer] = _places[_currentPlayer] - 12;
-
-                Console.WriteLine(_players[_currentPlayer]
-                        + "'s new location is "
-                        + _places[_currentPlayer]);
-                Console.WriteLine("The category is " + CurrentCategory());
-                AskQuestion();
+                this.MovePlayerAhead(roll);
+                Console.WriteLine($"The category is {this.CurrentCategory()}");
+                this.AskQuestion();
             }
+        }
+
+        private string PlayerName(int position)
+        {
+            return this._players[position].Name;
         }
 
         private void AskQuestion()
         {
-            if (CurrentCategory() == "Pop")
+            var category = this.CurrentCategory();
+
+            switch (category)
             {
-                Console.WriteLine(_popQuestions.First());
-                _popQuestions.RemoveFirst();
-            }
-            if (CurrentCategory() == "Science")
-            {
-                Console.WriteLine(_scienceQuestions.First());
-                _scienceQuestions.RemoveFirst();
-            }
-            if (CurrentCategory() == "Sports")
-            {
-                Console.WriteLine(_sportsQuestions.First());
-                _sportsQuestions.RemoveFirst();
-            }
-            if (CurrentCategory() == "Rock")
-            {
-                Console.WriteLine(_rockQuestions.First());
-                _rockQuestions.RemoveFirst();
+                case "Pop":
+                    Console.WriteLine(this._popQuestions.First());
+                    this._popQuestions.RemoveFirst();
+                    break;
+                case "Science":
+                    Console.WriteLine(this._scienceQuestions.First());
+                    this._scienceQuestions.RemoveFirst();
+                    break;
+                case "Sports":
+                    Console.WriteLine(this._sportsQuestions.First());
+                    this._sportsQuestions.RemoveFirst();
+                    break;
+                case "Rock":
+                    Console.WriteLine(this._rockQuestions.First());
+                    this._rockQuestions.RemoveFirst();
+                    break;
             }
         }
 
         private string CurrentCategory()
         {
-            switch (this._places[this._currentPlayer])
+            switch (this._currentPlayer.Place)
             {
                 case 0:
                 case 4:
@@ -135,17 +124,17 @@
 
         public bool WasCorrectlyAnswered()
         {
-            var winner = false;
-
-            if (_inPenaltyBox[_currentPlayer])
+            bool winner;
+            if (this._currentPlayer.InPenalityBox)
             {
-                if (_isGettingOutOfPenaltyBox)
+                if (this._isGettingOutOfPenaltyBox)
                 {
                     Console.WriteLine("Answer was correct!!!!");
                     this.AddCoin();
 
+                    winner = this.DidPlayerWin();
                     this.AdvanceToNextPlayer();
-                    return DidPlayerWin();
+                    return winner;
                 }
 
                 this.AdvanceToNextPlayer();
@@ -154,38 +143,43 @@
 
             Console.WriteLine("Answer was corrent!!!!");
             this.AddCoin();
+
+            winner = this.DidPlayerWin();
             this.AdvanceToNextPlayer();
-            return this.DidPlayerWin();
+            return winner;
         }
 
         public bool WrongAnswer()
         {
             Console.WriteLine("Question was incorrectly answered");
-            Console.WriteLine(_players[_currentPlayer] + " was sent to the penalty box");
-            _inPenaltyBox[_currentPlayer] = true;
-
+            Console.WriteLine(this._currentPlayer.SendToPenalityBox());
             this.AdvanceToNextPlayer();
             return true;
         }
 
         private void AddCoin()
         {
-            this._purses[this._currentPlayer]++;
-            Console.WriteLine(
-                this._players[this._currentPlayer] + " now has " + this._purses[this._currentPlayer] + " Gold Coins.");
+            Console.WriteLine(this._currentPlayer.AddCoin());
         }
 
         private bool DidPlayerWin()
         {
-            return this._purses[this._currentPlayer] < 6;
+            return this._currentPlayer.Purse < 6;
         }
 
         private void AdvanceToNextPlayer()
         {
-            this._currentPlayer++;
-            if (this._currentPlayer == this._players.Count) 
-                this._currentPlayer = 0;
+            var position = this._players.IndexOf(this._currentPlayer);
+            position++;
+            if (position == this._players.Count)
+                position = 0;
+
+            this._currentPlayer = this._players[position];
+        }
+
+        private void MovePlayerAhead(int roll)
+        {
+            Console.WriteLine(this._currentPlayer.MoveAhead(roll));
         }
     }
-
 }
